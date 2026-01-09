@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genesis - Evolution Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0e14;
+            --bg-panel: rgba(15, 20, 30, 0.95);
+            --border: rgba(255, 255, 255, 0.08);
+            --text: rgba(255, 255, 255, 0.9);
+            --text-muted: rgba(255, 255, 255, 0.5);
+            --accent: #22d3ee;
+            --accent-dim: rgba(34, 211, 238, 0.3);
+            --herbivore: #4ade80;
+            --carnivore: #f87171;
+            --omnivore: #fbbf24;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            background: linear-gradient(to bottom, rgba(10, 14, 20, 0.9), transparent);
+        }
+
+        .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 500;
+            letter-spacing: 0.15em;
+            color: var(--accent);
+        }
+
+        .logo span {
+            color: var(--text-muted);
+            font-weight: 300;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn.active {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn svg {
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        /* Stats Panel */
+        .stats-panel {
+            position: fixed;
+            top: 70px;
+            left: 24px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            min-width: 200px;
+            z-index: 100;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .stat-value.herbivore { color: var(--herbivore); }
+        .stat-value.carnivore { color: var(--carnivore); }
+        .stat-value.omnivore { color: var(--omnivore); }
+
+        /* Settings Panel */
+        .settings-panel {
+            position: fixed;
+            top: 70px;
+            right: 24px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            width: 240px;
+            z-index: 100;
+        }
+
+        .settings-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 12px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .setting-group {
+            margin-bottom: 14px;
+        }
+
+        .setting-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .setting-value {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Creature Inspector */
+        .inspector {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            min-width: 280px;
+            z-index: 100;
+            display: none;
+        }
+
+        .inspector.visible {
+            display: block;
+        }
+
+        .inspector-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .inspector-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent);
+        }
+
+        .inspector-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .gene-bar {
+            margin-bottom: 10px;
+        }
+
+        .gene-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .gene-track {
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .gene-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        /* Legend */
+        .legend {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            z-index: 100;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        /* Welcome Modal */
+        .welcome-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .welcome-overlay.hidden {
+            display: none;
+        }
+
+        .welcome-modal {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .welcome-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            color: var(--accent);
+            margin-bottom: 8px;
+            letter-spacing: 0.1em;
+        }
+
+        .welcome-subtitle {
+            color: var(--text-muted);
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+        }
+
+        .welcome-description {
+            color: var(--text);
+            line-height: 1.6;
+            margin-bottom: 24px;
+            font-size: 0.85rem;
+        }
+
+        .welcome-start {
+            background: var(--accent);
+            color: var(--bg-dark);
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .welcome-start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px var(--accent-dim);
+        }
+
+        /* Speed indicator */
+        .speed-indicator {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 8px 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            z-index: 100;
+        }
+
+        .speed-indicator span {
+            color: var(--accent);
+        }
+
+        /* Keyboard hints */
+        .hints {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            z-index: 100;
+        }
+
+        .hint kbd {
+            background: var(--bg-panel);
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid var(--border);
+            margin-right: 4px;
+        }
+
+        /* Extinction event */
+        .extinction-notice {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(248, 113, 113, 0.2);
+            border: 1px solid var(--carnivore);
+            border-radius: 12px;
+            padding: 20px 40px;
+            font-family: 'JetBrains Mono', monospace;
+            text-align: center;
+            z-index: 200;
+            display: none;
+        }
+
+        .extinction-notice.visible {
+            display: block;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        .extinction-title {
+            color: var(--carnivore);
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+        }
+
+        .extinction-text {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Welcome Modal -->
+    <div class="welcome-overlay" id="welcome">
+        <div class="welcome-modal">
+            <div class="welcome-title">GENESIS</div>
+            <div class="welcome-subtitle">Evolution Simulator</div>
+            <div class="welcome-description">
+                Watch life evolve in real-time. Creatures with unique genetic traits
+                compete for survival. The fit reproduce, the weak perish.
+                Natural selection shapes the population over generations.
+                <br><br>
+                <strong>Herbivores</strong> eat plants. <strong>Carnivores</strong> hunt other creatures.
+                <strong>Omnivores</strong> do both. Traits mutate with each generation.
+            </div>
+            <button class="welcome-start" id="startBtn">BEGIN SIMULATION</button>
+        </div>
+    </div>
+
+    <!-- Canvas -->
+    <canvas id="canvas"></canvas>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">GENESIS <span>// evolution simulator</span></div>
+        <div class="controls">
+            <button class="btn" id="pauseBtn">
+                <svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                PAUSE
+            </button>
+            <button class="btn" id="resetBtn">
+                <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                RESET
+            </button>
+            <button class="btn" id="spawnBtn">
+                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                SPAWN
+            </button>
+        </div>
+    </header>
+
+    <!-- Stats Panel -->
+    <div class="stats-panel" id="statsPanel">
+        <div class="stat-row">
+            <span class="stat-label">Population</span>
+            <span class="stat-value" id="statPopulation">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Herbivores</span>
+            <span class="stat-value herbivore" id="statHerbivores">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Omnivores</span>
+            <span class="stat-value omnivore" id="statOmnivores">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Carnivores</span>
+            <span class="stat-value carnivore" id="statCarnivores">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Generation</span>
+            <span class="stat-value" id="statGeneration">1</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Births</span>
+            <span class="stat-value" id="statBirths">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Deaths</span>
+            <span class="stat-value" id="statDeaths">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Food</span>
+            <span class="stat-value" id="statFood">0</span>
+        </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-title">Parameters</div>
+
+        <div class="setting-group">
+            <div class="setting-label">
+                <span>Mutation Rate</span>
+                <span class="setting-value" id="mutationValue">15%</span>
+            </div>
+            <input type="range" class="slider" id="mutationSlider" min="0" max="50" value="15">
+        </div>
+
+        <div class="setting-group">
+            <div class="setting-label">
+                <span>Food Spawn Rate</span>
+                <span class="setting-value" id="foodRateValue">3</span>
+            </div>
+            <input type="range" class="slider" id="foodRateSlider" min="1" max="10" value="3">
+        </div>
+
+        <div class="setting-group">
+            <div class="setting-label">
+                <span>Initial Creatures</span>
+                <span class="setting-value" id="initialValue">30</span>
+            </div>
+            <input type="range" class="slider" id="initialSlider" min="10" max="100" value="30">
+        </div>
+
+        <div class="setting-group">
+            <div class="setting-label">
+                <span>Energy Drain</span>
+                <span class="setting-value" id="drainValue">1.0x</span>
+            </div>
+            <input type="range" class="slider" id="drainSlider" min="0.5" max="2" step="0.1" value="1">
+        </div>
+    </div>
+
+    <!-- Creature Inspector -->
+    <div class="inspector" id="inspector">
+        <div class="inspector-header">
+            <span class="inspector-title">CREATURE #<span id="creatureId">0</span></span>
+            <button class="inspector-close" id="inspectorClose">&times;</button>
+        </div>
+        <div class="gene-bar">
+            <div class="gene-label">
+                <span>Speed</span>
+                <span id="geneSpeed">0</span>
+            </div>
+            <div class="gene-track">
+                <div class="gene-fill" id="geneSpeedBar" style="background: #60a5fa;"></div>
+            </div>
+        </div>
+        <div class="gene-bar">
+            <div class="gene-label">
+                <span>Size</span>
+                <span id="geneSize">0</span>
+            </div>
+            <div class="gene-track">
+                <div class="gene-fill" id="geneSizeBar" style="background: #a78bfa;"></div>
+            </div>
+        </div>
+        <div class="gene-bar">
+            <div class="gene-label">
+                <span>Sense Range</span>
+                <span id="geneSense">0</span>
+            </div>
+            <div class="gene-track">
+                <div class="gene-fill" id="geneSenseBar" style="background: #f472b6;"></div>
+            </div>
+        </div>
+        <div class="gene-bar">
+            <div class="gene-label">
+                <span>Diet (Herb ← → Carn)</span>
+                <span id="geneDiet">0</span>
+            </div>
+            <div class="gene-track">
+                <div class="gene-fill" id="geneDietBar" style="background: linear-gradient(90deg, #4ade80, #fbbf24, #f87171);"></div>
+            </div>
+        </div>
+        <div class="gene-bar">
+            <div class="gene-label">
+                <span>Energy</span>
+                <span id="geneEnergy">0</span>
+            </div>
+            <div class="gene-track">
+                <div class="gene-fill" id="geneEnergyBar" style="background: #22d3ee;"></div>
+            </div>
+        </div>
+        <div class="stat-row" style="margin-top: 8px;">
+            <span class="stat-label">Age</span>
+            <span class="stat-value" id="creatureAge">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Children</span>
+            <span class="stat-value" id="creatureChildren">0</span>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-dot" style="background: var(--herbivore);"></div>
+            <span>Herbivore</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot" style="background: var(--omnivore);"></div>
+            <span>Omnivore</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot" style="background: var(--carnivore);"></div>
+            <span>Carnivore</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot" style="background: #22c55e;"></div>
+            <span>Food</span>
+        </div>
+    </div>
+
+    <!-- Speed Indicator -->
+    <div class="speed-indicator">
+        Speed: <span id="speedDisplay">1x</span> &nbsp;|&nbsp;
+        <kbd style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px;">,</kbd> /
+        <kbd style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px;">.</kbd> to adjust
+    </div>
+
+    <!-- Hints -->
+    <div class="hints">
+        <span class="hint"><kbd>Space</kbd> Pause</span>
+        <span class="hint"><kbd>Click</kbd> Inspect</span>
+        <span class="hint"><kbd>R</kbd> Reset</span>
+    </div>
+
+    <!-- Extinction Notice -->
+    <div class="extinction-notice" id="extinctionNotice">
+        <div class="extinction-title">EXTINCTION EVENT</div>
+        <div class="extinction-text">All creatures have perished. Press R to restart.</div>
+    </div>
+
+    <script>
+        // ============================================
+        // GENESIS - Evolution Simulator
+        // ============================================
+
+        class Genesis {
+            constructor() {
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+
+                // State
+                this.creatures = [];
+                this.food = [];
+                this.isPaused = true;
+                this.selectedCreature = null;
+                this.time = 0;
+                this.speed = 1;
+                this.nextCreatureId = 1;
+
+                // Stats
+                this.stats = {
+                    births: 0,
+                    deaths: 0,
+                    maxGeneration: 1
+                };
+
+                // Settings
+                this.settings = {
+                    mutationRate: 0.15,
+                    foodSpawnRate: 3,
+                    initialCreatures: 30,
+                    energyDrain: 1.0,
+                    maxFood: 200,
+                    reproductionThreshold: 150,
+                    foodEnergy: 30
+                };
+
+                this.init();
+            }
+
+            init() {
+                this.resize();
+                this.bindEvents();
+            }
+
+            resize() {
+                const dpr = window.devicePixelRatio || 1;
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                this.canvas.width = this.width * dpr;
+                this.canvas.height = this.height * dpr;
+                this.canvas.style.width = this.width + 'px';
+                this.canvas.style.height = this.height + 'px';
+                this.ctx.scale(dpr, dpr);
+            }
+
+            bindEvents() {
+                window.addEventListener('resize', () => this.resize());
+
+                // Start button
+                document.getElementById('startBtn').addEventListener('click', () => {
+                    document.getElementById('welcome').classList.add('hidden');
+                    this.start();
+                });
+
+                // Control buttons
+                document.getElementById('pauseBtn').addEventListener('click', () => this.togglePause());
+                document.getElementById('resetBtn').addEventListener('click', () => this.reset());
+                document.getElementById('spawnBtn').addEventListener('click', () => this.spawnCreatures(10));
+
+                // Inspector close
+                document.getElementById('inspectorClose').addEventListener('click', () => {
+                    document.getElementById('inspector').classList.remove('visible');
+                    this.selectedCreature = null;
+                });
+
+                // Canvas click for inspection
+                this.canvas.addEventListener('click', (e) => this.handleClick(e));
+
+                // Keyboard
+                document.addEventListener('keydown', (e) => this.handleKeydown(e));
+
+                // Sliders
+                this.bindSlider('mutationSlider', 'mutationValue', (v) => {
+                    this.settings.mutationRate = v / 100;
+                    return v + '%';
+                });
+                this.bindSlider('foodRateSlider', 'foodRateValue', (v) => {
+                    this.settings.foodSpawnRate = parseInt(v);
+                    return v;
+                });
+                this.bindSlider('initialSlider', 'initialValue', (v) => {
+                    this.settings.initialCreatures = parseInt(v);
+                    return v;
+                });
+                this.bindSlider('drainSlider', 'drainValue', (v) => {
+                    this.settings.energyDrain = parseFloat(v);
+                    return v + 'x';
+                });
+            }
+
+            bindSlider(sliderId, valueId, callback) {
+                const slider = document.getElementById(sliderId);
+                const valueEl = document.getElementById(valueId);
+                slider.addEventListener('input', () => {
+                    valueEl.textContent = callback(slider.value);
+                });
+            }
+
+            handleClick(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                // Find clicked creature
+                for (const creature of this.creatures) {
+                    const dx = creature.x - x;
+                    const dy = creature.y - y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < creature.size + 5) {
+                        this.selectedCreature = creature;
+                        this.showInspector(creature);
+                        return;
+                    }
+                }
+
+                // Click on empty space - hide inspector
+                document.getElementById('inspector').classList.remove('visible');
+                this.selectedCreature = null;
+            }
+
+            showInspector(creature) {
+                const inspector = document.getElementById('inspector');
+                inspector.classList.add('visible');
+
+                document.getElementById('creatureId').textContent = creature.id;
+                this.updateInspector(creature);
+            }
+
+            updateInspector(creature) {
+                if (!creature) return;
+
+                document.getElementById('geneSpeed').textContent = creature.genes.speed.toFixed(2);
+                document.getElementById('geneSpeedBar').style.width = (creature.genes.speed / 5 * 100) + '%';
+
+                document.getElementById('geneSize').textContent = creature.genes.size.toFixed(2);
+                document.getElementById('geneSizeBar').style.width = (creature.genes.size / 20 * 100) + '%';
+
+                document.getElementById('geneSense').textContent = creature.genes.senseRange.toFixed(0);
+                document.getElementById('geneSenseBar').style.width = (creature.genes.senseRange / 200 * 100) + '%';
+
+                document.getElementById('geneDiet').textContent = creature.genes.diet.toFixed(2);
+                document.getElementById('geneDietBar').style.width = (creature.genes.diet * 100) + '%';
+
+                document.getElementById('geneEnergy').textContent = creature.energy.toFixed(0);
+                document.getElementById('geneEnergyBar').style.width = Math.min(100, creature.energy / 2) + '%';
+
+                document.getElementById('creatureAge').textContent = Math.floor(creature.age / 60) + 's';
+                document.getElementById('creatureChildren').textContent = creature.children;
+            }
+
+            handleKeydown(e) {
+                switch(e.key.toLowerCase()) {
+                    case ' ':
+                        e.preventDefault();
+                        this.togglePause();
+                        break;
+                    case 'r':
+                        this.reset();
+                        break;
+                    case ',':
+                        this.speed = Math.max(0.25, this.speed - 0.25);
+                        document.getElementById('speedDisplay').textContent = this.speed + 'x';
+                        break;
+                    case '.':
+                        this.speed = Math.min(5, this.speed + 0.25);
+                        document.getElementById('speedDisplay').textContent = this.speed + 'x';
+                        break;
+                }
+            }
+
+            togglePause() {
+                this.isPaused = !this.isPaused;
+                const btn = document.getElementById('pauseBtn');
+                if (this.isPaused) {
+                    btn.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> PLAY';
+                } else {
+                    btn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> PAUSE';
+                }
+            }
+
+            start() {
+                this.reset();
+                this.isPaused = false;
+                document.getElementById('pauseBtn').innerHTML = '<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> PAUSE';
+                this.animate();
+            }
+
+            reset() {
+                this.creatures = [];
+                this.food = [];
+                this.stats = { births: 0, deaths: 0, maxGeneration: 1 };
+                this.nextCreatureId = 1;
+                this.selectedCreature = null;
+                document.getElementById('inspector').classList.remove('visible');
+                document.getElementById('extinctionNotice').classList.remove('visible');
+
+                // Spawn initial food
+                for (let i = 0; i < 100; i++) {
+                    this.spawnFood();
+                }
+
+                // Spawn initial creatures
+                this.spawnCreatures(this.settings.initialCreatures);
+
+                this.updateStats();
+            }
+
+            spawnCreatures(count) {
+                for (let i = 0; i < count; i++) {
+                    this.creatures.push(this.createCreature());
+                }
+            }
+
+            createCreature(parent = null) {
+                const creature = {
+                    id: this.nextCreatureId++,
+                    x: parent ? parent.x + (Math.random() - 0.5) * 30 : Math.random() * this.width,
+                    y: parent ? parent.y + (Math.random() - 0.5) * 30 : Math.random() * this.height,
+                    vx: 0,
+                    vy: 0,
+                    angle: Math.random() * Math.PI * 2,
+                    energy: parent ? 80 : 100,
+                    age: 0,
+                    generation: parent ? parent.generation + 1 : 1,
+                    children: 0,
+                    genes: parent ? this.mutateGenes(parent.genes) : this.randomGenes()
+                };
+
+                // Derived properties from genes
+                creature.size = 5 + creature.genes.size * 0.5;
+                creature.maxSpeed = creature.genes.speed;
+
+                if (parent) {
+                    this.stats.births++;
+                    this.stats.maxGeneration = Math.max(this.stats.maxGeneration, creature.generation);
+                }
+
+                return creature;
+            }
+
+            randomGenes() {
+                return {
+                    speed: 1 + Math.random() * 2,       // 1-3
+                    size: 5 + Math.random() * 10,       // 5-15
+                    senseRange: 50 + Math.random() * 100, // 50-150
+                    diet: Math.random(),                 // 0 = herbivore, 1 = carnivore
+                    efficiency: 0.5 + Math.random() * 0.5 // Energy efficiency
+                };
+            }
+
+            mutateGenes(parentGenes) {
+                const genes = { ...parentGenes };
+                const mutationStrength = 0.2;
+
+                if (Math.random() < this.settings.mutationRate) {
+                    genes.speed = Math.max(0.5, Math.min(5, genes.speed + (Math.random() - 0.5) * mutationStrength * 2));
+                }
+                if (Math.random() < this.settings.mutationRate) {
+                    genes.size = Math.max(3, Math.min(20, genes.size + (Math.random() - 0.5) * mutationStrength * 10));
+                }
+                if (Math.random() < this.settings.mutationRate) {
+                    genes.senseRange = Math.max(20, Math.min(200, genes.senseRange + (Math.random() - 0.5) * mutationStrength * 100));
+                }
+                if (Math.random() < this.settings.mutationRate) {
+                    genes.diet = Math.max(0, Math.min(1, genes.diet + (Math.random() - 0.5) * mutationStrength));
+                }
+                if (Math.random() < this.settings.mutationRate) {
+                    genes.efficiency = Math.max(0.3, Math.min(1, genes.efficiency + (Math.random() - 0.5) * mutationStrength));
+                }
+
+                return genes;
+            }
+
+            spawnFood() {
+                if (this.food.length >= this.settings.maxFood) return;
+
+                this.food.push({
+                    x: Math.random() * this.width,
+                    y: Math.random() * this.height,
+                    energy: this.settings.foodEnergy,
+                    size: 3 + Math.random() * 3
+                });
+            }
+
+            update() {
+                if (this.isPaused) return;
+
+                // Spawn food
+                if (Math.random() < this.settings.foodSpawnRate * 0.02 * this.speed) {
+                    this.spawnFood();
+                }
+
+                // Update creatures
+                for (let i = this.creatures.length - 1; i >= 0; i--) {
+                    const creature = this.creatures[i];
+                    this.updateCreature(creature);
+
+                    // Check death
+                    if (creature.energy <= 0) {
+                        this.creatures.splice(i, 1);
+                        this.stats.deaths++;
+
+                        if (this.selectedCreature === creature) {
+                            document.getElementById('inspector').classList.remove('visible');
+                            this.selectedCreature = null;
+                        }
+                    }
+                    // Check reproduction
+                    else if (creature.energy >= this.settings.reproductionThreshold) {
+                        creature.energy *= 0.5;
+                        creature.children++;
+                        this.creatures.push(this.createCreature(creature));
+                    }
+                }
+
+                // Check extinction
+                if (this.creatures.length === 0) {
+                    document.getElementById('extinctionNotice').classList.add('visible');
+                    this.isPaused = true;
+                }
+
+                this.time += this.speed;
+
+                // Update selected creature inspector
+                if (this.selectedCreature) {
+                    this.updateInspector(this.selectedCreature);
+                }
+            }
+
+            updateCreature(creature) {
+                creature.age += this.speed;
+
+                // Energy drain (based on size and speed)
+                const baseDrain = 0.02 * this.settings.energyDrain;
+                const sizeCost = creature.genes.size * 0.002;
+                const speedCost = creature.genes.speed * 0.005;
+                creature.energy -= (baseDrain + sizeCost + speedCost) * this.speed;
+
+                // Find target (food or prey)
+                let target = null;
+                let targetDist = creature.genes.senseRange;
+
+                // Herbivore behavior - look for food
+                if (creature.genes.diet < 0.7) {
+                    for (const food of this.food) {
+                        const dx = food.x - creature.x;
+                        const dy = food.y - creature.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < targetDist) {
+                            target = food;
+                            targetDist = dist;
+                        }
+                    }
+                }
+
+                // Carnivore behavior - look for smaller creatures
+                if (creature.genes.diet > 0.3) {
+                    for (const prey of this.creatures) {
+                        if (prey === creature) continue;
+                        if (prey.genes.size >= creature.genes.size * 0.9) continue; // Can only eat smaller
+
+                        const dx = prey.x - creature.x;
+                        const dy = prey.y - creature.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        // Carnivores prefer prey over plants
+                        const preferenceBonus = creature.genes.diet > 0.6 ? 0.5 : 1;
+
+                        if (dist * preferenceBonus < targetDist) {
+                            target = { ...prey, isPrey: true };
+                            targetDist = dist * preferenceBonus;
+                        }
+                    }
+                }
+
+                // Move toward target or wander
+                if (target) {
+                    const dx = target.x - creature.x;
+                    const dy = target.y - creature.y;
+                    creature.angle = Math.atan2(dy, dx);
+                } else {
+                    // Wander
+                    creature.angle += (Math.random() - 0.5) * 0.3;
+                }
+
+                // Apply movement
+                creature.vx = Math.cos(creature.angle) * creature.maxSpeed;
+                creature.vy = Math.sin(creature.angle) * creature.maxSpeed;
+
+                creature.x += creature.vx * this.speed;
+                creature.y += creature.vy * this.speed;
+
+                // Wrap around edges
+                if (creature.x < 0) creature.x = this.width;
+                if (creature.x > this.width) creature.x = 0;
+                if (creature.y < 0) creature.y = this.height;
+                if (creature.y > this.height) creature.y = 0;
+
+                // Eat food
+                for (let i = this.food.length - 1; i >= 0; i--) {
+                    const food = this.food[i];
+                    const dx = food.x - creature.x;
+                    const dy = food.y - creature.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < creature.size + food.size) {
+                        // Herbivores and omnivores can eat plants
+                        if (creature.genes.diet < 0.8) {
+                            const efficiency = (1 - creature.genes.diet * 0.5) * creature.genes.efficiency;
+                            creature.energy += food.energy * efficiency;
+                            this.food.splice(i, 1);
+                        }
+                    }
+                }
+
+                // Hunt prey
+                for (let i = this.creatures.length - 1; i >= 0; i--) {
+                    const prey = this.creatures[i];
+                    if (prey === creature) continue;
+                    if (prey.genes.size >= creature.genes.size * 0.9) continue;
+
+                    const dx = prey.x - creature.x;
+                    const dy = prey.y - creature.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < creature.size + prey.size) {
+                        // Carnivores and omnivores can eat prey
+                        if (creature.genes.diet > 0.2) {
+                            const efficiency = creature.genes.diet * creature.genes.efficiency;
+                            creature.energy += prey.energy * 0.7 * efficiency;
+                            prey.energy = 0; // Mark for death
+                        }
+                    }
+                }
+            }
+
+            updateStats() {
+                let herbivores = 0, omnivores = 0, carnivores = 0;
+
+                for (const creature of this.creatures) {
+                    if (creature.genes.diet < 0.33) herbivores++;
+                    else if (creature.genes.diet < 0.66) omnivores++;
+                    else carnivores++;
+                }
+
+                document.getElementById('statPopulation').textContent = this.creatures.length;
+                document.getElementById('statHerbivores').textContent = herbivores;
+                document.getElementById('statOmnivores').textContent = omnivores;
+                document.getElementById('statCarnivores').textContent = carnivores;
+                document.getElementById('statGeneration').textContent = this.stats.maxGeneration;
+                document.getElementById('statBirths').textContent = this.stats.births;
+                document.getElementById('statDeaths').textContent = this.stats.deaths;
+                document.getElementById('statFood').textContent = this.food.length;
+            }
+
+            draw() {
+                // Clear
+                this.ctx.fillStyle = '#0a0e14';
+                this.ctx.fillRect(0, 0, this.width, this.height);
+
+                // Draw grid (subtle)
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+                this.ctx.lineWidth = 1;
+                const gridSize = 50;
+                for (let x = 0; x < this.width; x += gridSize) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, this.height);
+                    this.ctx.stroke();
+                }
+                for (let y = 0; y < this.height; y += gridSize) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(this.width, y);
+                    this.ctx.stroke();
+                }
+
+                // Draw food
+                for (const food of this.food) {
+                    this.ctx.fillStyle = '#22c55e';
+                    this.ctx.globalAlpha = 0.8;
+                    this.ctx.beginPath();
+                    this.ctx.arc(food.x, food.y, food.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    // Glow
+                    this.ctx.globalAlpha = 0.2;
+                    this.ctx.beginPath();
+                    this.ctx.arc(food.x, food.y, food.size * 2, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+                this.ctx.globalAlpha = 1;
+
+                // Draw creatures
+                for (const creature of this.creatures) {
+                    this.drawCreature(creature);
+                }
+
+                // Draw selection highlight
+                if (this.selectedCreature && this.creatures.includes(this.selectedCreature)) {
+                    const c = this.selectedCreature;
+                    this.ctx.strokeStyle = '#22d3ee';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.setLineDash([5, 5]);
+                    this.ctx.beginPath();
+                    this.ctx.arc(c.x, c.y, c.size + 8, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                    this.ctx.setLineDash([]);
+
+                    // Draw sense range
+                    this.ctx.strokeStyle = 'rgba(34, 211, 238, 0.2)';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.beginPath();
+                    this.ctx.arc(c.x, c.y, c.genes.senseRange, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                }
+            }
+
+            drawCreature(creature) {
+                const { x, y, angle, genes, energy } = creature;
+                const size = creature.size;
+
+                // Color based on diet
+                let color;
+                if (genes.diet < 0.33) {
+                    color = '#4ade80'; // Herbivore - green
+                } else if (genes.diet < 0.66) {
+                    color = '#fbbf24'; // Omnivore - yellow
+                } else {
+                    color = '#f87171'; // Carnivore - red
+                }
+
+                // Energy affects opacity
+                const alpha = Math.max(0.4, Math.min(1, energy / 100));
+
+                // Body
+                this.ctx.fillStyle = color;
+                this.ctx.globalAlpha = alpha;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, size, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                // Direction indicator
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, y);
+                this.ctx.lineTo(
+                    x + Math.cos(angle) * (size + 4),
+                    y + Math.sin(angle) * (size + 4)
+                );
+                this.ctx.stroke();
+
+                // Glow effect
+                this.ctx.globalAlpha = alpha * 0.3;
+                this.ctx.fillStyle = color;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, size * 1.5, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                this.ctx.globalAlpha = 1;
+            }
+
+            animate() {
+                this.update();
+                this.draw();
+                this.updateStats();
+
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            window.genesis = new Genesis();
+        });
+    </script>
+</body>
+</html>
